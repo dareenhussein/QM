@@ -1,3 +1,11 @@
+/******************************************************************************
+
+                              Online C++ Compiler.
+               Code, Compile, Run and Debug C++ program online.
+Write your code in this editor and press "Run" button to compile and execute it.
+
+*******************************************************************************/
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -5,6 +13,7 @@
 #include <cmath>
 #include <map>
 #include <algorithm>
+#include<bits/stdc++.h>
 
 using namespace std;
 
@@ -22,15 +31,23 @@ vector<int> takeInput(){
     int v;
     cout << "enter number of variables: " ;
     cin >> v;
-    if (v > 16 || v <1)
-    {
-        cout << "Please enter a valid number (1-16)" ;
-        exit(1);
-    }
+   do {
+		while (!(cin >> v)) {
+		cin.clear();
+		cin.ignore();
+			cout << "Incorrect. Please enter number of variables again." << endl;
+		}
+		if (v < 1 || v>16) {
+		    cin.clear();
+			cin.ignore();
+			cout << "INVALID. Please enter a valid number (1-16)" << endl;
+		}
+
+	} while (v <1 || v>16);
     int numberOfItems = pow(2,v) ;
     vector <int> input (numberOfItems, 0);
     string inputStr;
-    cout << "Please enter the minterms separated by a Comma: " ;
+    cout << "Please enter the minterms separated by a comma: " ;
     cin.ignore();
     getline (cin, inputStr);
     istringstream iss(inputStr);
@@ -56,7 +73,7 @@ vector<int> takeInput(){
         }
         
     }
-    cout << "Please enter the dont cares separated by a Comma: " ;
+    cout << "Please enter the dont cares separated by a comma: " ;
     getline (cin, inputStr);
     istringstream ivv(inputStr);
     while ( getline(ivv,s,',')){
@@ -74,7 +91,7 @@ vector<int> takeInput(){
                     input[atoi(s.c_str())] = -1;
             }
             else {
-                cout << "Please Enter number within range  \n";
+                cout << "Please number within range  \n";
                 exit(1);
             }
         }
@@ -122,6 +139,29 @@ void calcFirstCol(map <int, string> & minTerms_dontCares, int numberOfVariables)
     }
 }
 
+
+
+bool Is_equal (vector <int>v, int var )
+{  for (int i=0; i <v.size(); i++)
+     return (v[i] ^ var);
+     
+}
+
+string CheckAdj(string str1, string str2)
+{
+        string combinedString = "";
+        for (int i = 0; i < str1.length(); i++)
+            if (str1[i] != str1[i])
+                combinedString += "-";
+            else
+                combinedString += str1[i];
+
+       
+        return combinedString;
+    
+}
+
+
 int main()
 {
     //  vector <int> input;
@@ -129,9 +169,11 @@ int main()
     map <int,string> dontCares;
     map <int, string> minTerms_dontCares;
     vector <int> input{ -1,1,1,0 };
-    //    input = takeInput();
+    //   input = takeInput();
     fillMinTermsDontCaresDict (input ,minTerms_dontCares);
     calcFirstCol(minTerms_dontCares, log2 (input.size()));
-    //    cout << toBinary(500) << endl;
+      //cout << toBinary(500) << endl;
+   //   cout << Is_equal(input,3);
     return 0;
 }
+
