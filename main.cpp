@@ -30,13 +30,13 @@ vector<int> takeInput(){
     int numberOfItems = pow(2,v) ;
     vector <int> input (numberOfItems, 0);
     string inputStr;
-    cout << "Please enter the minterms separated by a space: " ;
+    cout << "Please enter the minterms separated by a Comma: " ;
     cin.ignore();
     getline (cin, inputStr);
     istringstream iss(inputStr);
     string s;
     int count =0 ;
-    while ( getline(iss,s,' ')){
+    while ( getline(iss,s,',')){
         count ++;
         if (1) //to do adjust the isdigit
         {
@@ -56,10 +56,10 @@ vector<int> takeInput(){
         }
         
     }
-    cout << "Please enter the dont cares separated by a space: " ;
+    cout << "Please enter the dont cares separated by a Comma: " ;
     getline (cin, inputStr);
     istringstream ivv(inputStr);
-    while ( getline(ivv,s,' ')){
+    while ( getline(ivv,s,',')){
         count ++;
         if (1 && count < numberOfItems) //to do adjust the isdigit
         {
@@ -74,7 +74,7 @@ vector<int> takeInput(){
                     input[atoi(s.c_str())] = -1;
             }
             else {
-                cout << "Please number within range  \n";
+                cout << "Please Enter number within range  \n";
                 exit(1);
             }
         }
