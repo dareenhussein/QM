@@ -1,395 +1,374 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <cmath>
-#include <map>
-#include <algorithm>
 #include <fstream>
-#include <iomanip>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <chrono>
+#include <string>
+#include <vector>
+#include "bit.h"
+#include "Big.h"
 
 using namespace std;
+using namespace std::chrono;
 
-// trim from start
-static inline std::string &ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-                                    std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
+
+int getVarNo(string& arr) {
+	int varNo = stoi(arr);
+	return varNo;
 }
 
-// trim from end
-static inline std::string &rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
+void CreateColBasedOn1s(vector <Big>& big, int num, vector <int> mins, vector <bit>& minterms) {
+	//get minterms
+	minterms.resize(mins.size());
+	big.resize(mins.size());
+	for (int i = 0; i < mins.size(); i++)
+	{
+		bit temp;
+		temp.setBit(minterms[i].decToBinary(mins[i], num));
+		temp.setMinterm(mins[i]);
+		minterms[i] = (temp);
+	}
+	//generate first column
+	for (int i = 0; i < num + 1; i++)
+	{
+		big[i].cols.resize(num + 1);
+	}
+	for (int j = 0; j < minterms.size(); j++) {
+		big[0].cols[minterms[j].noOf1s()].terms.push_back(minterms[j]);
+	}
 }
-
-// trim from both ends
-static inline std::string &trim(std::string &s) {
-    return ltrim(rtrim(s));
+bool Exist(vector <bit>& v, int i, string s) {
+	for (int j = 0; j < i; j++)
+		if (v[j].get_binary_bit_term() == s)
+			return true;
+	return false;
 }
+void CreateSecCol(Big& first, Big& second) {
+	bit t;
+	for (int i = 0; i < first.cols.size() - 1; i++)
+	{
+		for (int j = 0; j < first.cols[i].terms.size(); j++)
+		{
+			for (int z = 0; z < first.cols[i + 1].terms.size(); z++) {
+				bit combined;
+				if (t.IfAdjecentCreate1stCol(first.cols[i].terms[j], first.cols[i + 1].terms[z], combined))
+				{
+					if (!Exist(second.cols[combined.noOf1s()].terms, second.cols[combined.noOf1s()].terms.size(), combined.get_binary_bit_term())) {
 
-string toBinary(int n)
+						second.cols[combined.noOf1s()].terms.push_back(combined);
+
+					}
+
+				}
+			}
+		}
+
+
+
+	}
+
+}
+vector<int> fromStr2Vint(string& arr)
 {
-    std::string r;
-    while(n!=0) {r=(n%2==0 ?"0":"1")+r; n/=2;}
-    return r;
-}
+	stringstream ss(arr);
+	vector<string> result;
+	while (ss.good())
+	{
+		string substr;
+		getline(ss, substr, ',');
+		result.push_back(substr);
+	}
+	vector<int> res;
+	for (int i = 0; i < result.size(); i++)
+	{
+		res.push_back(atoi(result[i].c_str()));
+	}
+	return res;
 
-string compare (string b1, string b2, int & pos, int &count)
+}
+void getPIs(vector<Big> big, vector<bit>& grp)
 {
-    string result = "";
-    count = 0;
-    for (int i =0; i< b2.length() ; i++)
-    { if (b1.length() != b2.length())
-    {
-        count = 5;
-        return "";
-    }
-        if (b1[i] != b2[i])
-        {
-            count ++;
-            pos = i;
-            result+= "-";
-            if (count > 1)
-            {
-                return "";
-            }
-        }
-        else
-            result += b1[i];
-    }
-    return result;
-}
 
-string constructKey(string b1, string b2)
+	for (int s = 0; s < big.size(); s++)
+		for (int m = 0; m < big[s].cols.size(); m++)
+			for (int i = 0; i < big[s].cols[m].terms.size(); i++)
+				if (!big[s].cols[m].terms[i].Checked()) {
+					grp.push_back(big[s].cols[m].terms[i]);
+				}
+} //awel, PIs vector y axis ,,, tany//: minterms x-axis 
+void calcEssentialImplicants(vector <bit>& grp, vector <int>& minterms)
 {
-    return b1 + "," + b2;
-}
+	grp.resize(minterms.size());
+	minterms.resize(minterms.size());
+	vector <vector<int>> grid(grp.size(), vector<int>(minterms.size()));
+	for (int i = 0; i < grp.size(); i++) {
+		istringstream iss(grp[i].get_binary_bit_term());
+		string s;
+		int n;
+		while (getline(iss, s, ',')) {
+			n = atoi(s.c_str());
+			vector<int>::iterator it = find(minterms.begin(), minterms.end(), n);
+			if (it == minterms.end())
+			{
+				continue;
+			}
+			else {
+				int index = distance(minterms.begin(), it);
+				grid[i][index] = 1;
+			}
+		}
+	}
+	int count = 0;
+	int k;
+	vector <string> EPI;
+	vector <int> ks;
+	for (int i = 0; i < minterms.size(); i++) {
+		for (int j = 0; j < grp.size(); j++) {
+			count += grid[j][i];
+			if ((count == 1) && (grid[j][i] == 1)) k = j;
+		}
+		if (count == 1) {  // if the count still equals to 1 then the index in k is essential
+			EPI.push_back(grp[k].get_binary_bit_term());
+			ks.push_back(k);
 
-bool checkValue(map <string, string> someMap, string value)
+		}
+		count = 0; // reset the count for the next loop
+	}
+
+	for (int i = 0; i < EPI.size(); i++)
+		cout << EPI[i] << endl;
+	for (int x = 0; x < ks.size(); x++) {
+		for (int y = 0; y < minterms.size(); y++) {
+			if (grid[ks[x]][y] == 1) {
+				for (int z = 0; z < grp.size(); z++)
+					grid[z][y] = 0;
+				grid[ks[x]][y] = 0;
+			}
+		}
+	}
+}
+bool find(vector <int> v, int k) {
+	for (int i = 0; i < v.size(); i++)
+		if (v[i] == k)
+			return true;
+	return false;
+}
+/*bool check_for_value(vector <bit> v, int k) {
+	for (int i = 0; i < v.size(); i++) {
+		istringstream iss(v[i].get_binary_bit_term());
+		string s;
+		int n;
+		while (getline(iss, s, ',')) {
+			n = atoi(s.c_str());
+			if (find(, n)
+				return true;
+			else false;
+		}
+	}
+}*/
+vector<string> ret;
+void recurse(string minterm, int idx)
 {
-    map<string, string>::iterator it;
-    for (it = someMap.begin(); it != someMap.end(); ++it )
-        if (it->second == value)
-            return false;
-    return true;
+	if (idx == minterm.size())
+	{
+		ret.push_back(minterm);
+		return;
+	}
+	if (minterm[idx] == '-')
+	{
+		minterm[idx] = '0';
+		recurse(minterm, idx + 1);
+		minterm[idx] = '1';
+		recurse(minterm, idx + 1);
+	}
+	else recurse(minterm, idx + 1);
 }
-
-bool isNumber(const std::string& s)
+int binaryToDecimal(string binary)
 {
-    return !s.empty() && std::find_if(s.begin(),
-                                      s.end(), [](char c) { return !isdigit(c); }) == s.end();
+	int sz = binary.size();
+	int idx = 0;
+	int val = 0;
+	for (int i = sz - 1; i >= 0; i--)
+	{
+		if (binary[i] == '1')
+		{
+			val += pow(2, idx);
+		}
+		++idx;
+	}
+	return val;
 }
+void Run(int VarNo, vector<int> minterms, vector<int> dontCares, vector <Big>& col, vector<bit> b) {
+	vector <Big> big;
+	vector <bit> myPIs;
+	vector <int> v;
 
-void parseMinTerms(string line, vector<int> &input, int numberOfItems, int &count)
-{
-    istringstream iss(line);
-    string s;
-    while ( getline(iss,s,',')){
-        trim (s);
-        count ++;
-        if (isNumber(s)) //to do adjust the isdigit
-        {
-            if (atoi(s.c_str()) < numberOfItems && count < numberOfItems)
-            {
-                if (input [atoi(s.c_str())] == 0)
-                    input[atoi(s.c_str())] = 1;
-                else
-                {
-                    cout << "There are repeated terms \n" ;
-                    exit(1);
-                }
-            }
-            else {
-                cout << "The numbers are not within range  \n";
-                exit(1);
-            }
-        }
-        else
-        {
-            cout << "There exists non-digits in the minterms \n";
-            exit(1);
-        }
-        
-    }
-    if (count == 0){
-        cout << "Your Function is always equal to 0" << endl;
-        exit(1);
-    }
-    else if (count == pow(2, numberOfItems)){
-        cout << "Your Function is always equal to 1" << endl;
-    }
-}
+	for (int i = 0; i < minterms.size(); i++)
+		v.push_back(minterms[i]);
 
-void parseDontCares(string line, vector<int> &input, int numberOfItems, int &count)
-{
-    string s;
-    istringstream ivv(line);
-    while ( getline(ivv,s,',')){
-        trim (s);
-        count ++;
-        if (isNumber(s) && count < numberOfItems) //to do adjust the isdigit
-        {
-            if (atoi(s.c_str()) < numberOfItems && count < numberOfItems)
-            {
-                
-                if (input[atoi(s.c_str())] == 1){
-                    cout << "The number was used in the minterms";
-                    exit(1);
-                }
-                else if (input[atoi(s.c_str())] == -1)
-                {
-                    cout << "There are repeated terms \n" ;
-                    exit(1);
-                }
-                else
-                    input[atoi(s.c_str())] = -1;
-            }
-            else {
-                cout << "The numbers are not within range  \n";
-                exit(1);
-            }
-        }
-        else
-        {
-            cout << "There exists non-digits and make sure sum of dont cares and \
-            miterms within the range \n";
-            exit(1);
-        }
-    }
-}
+	if (VarNo == 0) {
+		cout << "Invalid, You can not have a function with 0 Variables" << endl;
+	}
+	else if (minterms.size() == 0) {
+		cout << "Warning, all minterms are zero so consequently, your function is zero" << endl;
+	}
+	else if (dontCares.size() == 1) {
+		cout << "Warning, all possible combinations are included so consequently, your function is one";
+	}
+	else if (minterms.size() == pow(2, VarNo)) {
+		cout << "Warning, all possible combinations are included so consequently, your function is one" << endl;
+	}
+	else {
 
-vector<int> takeInput (string path)
-{
-    string line;
-    vector <int> input ;
-    ifstream myfile (path);
-    int v ;
-    int numberOfItems;
-    int linesCount = 0;
-    int count = 0;
-    if (myfile.is_open())
-    {
-        while ( getline (myfile,line) )
-        {
-            linesCount ++;
-            if (linesCount == 1){
-                v = atoi(line.c_str());
-                numberOfItems = pow(2,v);
-                if (v > 16 || v <1)
-                {
-                    cout << "Number is not within range (1-16)" ;
-                    exit(1);
-                }
-                input.resize(numberOfItems, 0) ;
-            }
-            else if (linesCount == 2)
-                parseMinTerms(line, input, numberOfItems, count);
-            else if (linesCount == 3)
-                parseDontCares(line, input, numberOfItems, count);
-        }
-        myfile.close();
-    }
-    return input;
-}
+	}
+	minterms.insert(minterms.end(), dontCares.begin(), dontCares.end());
+	CreateColBasedOn1s(col, VarNo, minterms, b);
 
-void fillMinTermsDontCaresDict(vector<int> input,map <string, string>& minTerms_dontCares,
-                               vector <string> & minTerms)
-{
-    string index;
-    for  (int i =0; i < input.size() ; i++)
-    {
-        if (input[i] == 1 || input[i] == -1)
-        {
-            index = toBinary(i);
-            while (index.size() < log2 (input.size()))
-                index.insert(index.begin(), '0');
-            minTerms_dontCares.insert({to_string(i), index});
-            if (input[i] == 1)
-                minTerms.push_back(to_string(i));
-        }
-    }
-}
+	CreateSecCol(col[0], col[1]);
+	CreateSecCol(col[1], col[2]);
+	CreateSecCol(col[2], col[3]);
+	CreateSecCol(col[3], col[4]);
+	CreateSecCol(col[4], col[5]);
 
-void calcFirstCol(map <string, string> & minTerms_dontCares,  vector <map<string, string>> &col1){
-    
-    map<string, string>::iterator itr;
-    int groupNo;
-    for (itr = minTerms_dontCares.begin(); itr != minTerms_dontCares.end(); ++itr)
-    {
-        groupNo = count(itr->second.begin() , itr->second.end(), '1');
-        if (groupNo >= col1.size()){
-            col1.resize(groupNo +1);
-            col1[groupNo].insert({itr->first, itr->second});
-        }
-        else {
-            col1[groupNo].insert({itr->first, itr->second});
-        }
-    }
-}
+	vector<bit> Vstr;
+	vector<bit>prime_imps;
+	for (int i = 0; i < col.size(); ++i)
+	{
+		for (int j = 0; j < col[i].cols.size(); ++j)
+		{
+			for (int z = 0; z < col[i].cols[j].terms.size(); ++z)
+			{
+				col[i].cols[j].terms[z].print();
+				if (!col[i].cols[j].terms[z].checked)
+				{
+					prime_imps.push_back(col[i].cols[j].terms[z]);
+					Vstr.push_back(col[i].cols[j].terms[z]);
+				}
+			}
+		}
+	}
 
-void calcRestOfCols(vector <map<string, string>>& col1, map <string, string> & starredResults)
-{
-    map<string, string>::iterator itr;
-    map<string, string>::iterator itr2;
-    vector <string> matched ;
-    vector <map<string, string>> resultantCol;
-    int count = 0;
-    int pos = 0;
-    string result;
-    
-    for (int i=0; i< col1.size()  ; i++)
-    {
-        
-        for (itr = col1[i].begin() ; itr != col1[i].end() ; ++itr)
-        {
-            for (itr2 = col1[i+1].begin() ; itr2 != col1[i+1].end() ; itr2++)
-            {
-                if (i == col1.size() -1)
-                    break;
-                result = compare (itr -> second, itr2 -> second, pos, count );
-                if (count ==1)
-                {
-                    if (i >= resultantCol.size())
-                        resultantCol.resize( i + 1);
-                    string keyInResultCol;
-                    keyInResultCol = constructKey(itr->first, itr2->first);
-                    resultantCol[i].insert({keyInResultCol, result});
-                    matched.push_back(itr->first);
-                    matched.push_back(itr2->first);
-                }
-            }
-            if (find(matched.begin(), matched.end(), itr->first) == matched.end() &&
-                checkValue(starredResults, itr->second) ){
-                starredResults.insert({itr->first, itr->second});
-            }
-        }
-    }
-    
-    col1 = resultantCol ;
-    while (col1.size() != 0 )
-        calcRestOfCols(col1, starredResults);
-}
+	cout << "Essential Prime Implicants" << endl;
+	int arr[100] = { 0 };
+	for (int i = 0; i < prime_imps.size(); i++)
+	{
+		ret.clear();
+		recurse(prime_imps[i].get_binary_bit_term(), 0);
+		cout << "the term " << prime_imps[i].get_binary_bit_term() << endl;
+		for (int i = 0; i < ret.size(); ++i) {
+			cout << ret[i] << ' ' << binaryToDecimal(ret[i]) << endl;
+			arr[binaryToDecimal(ret[i])]++;
+		}
+	}
+	vector<int> myEssentialNumbers;
+	for (int i = 0; i < v.size(); ++i)
+	{
+		if (arr[v[i]] == 1)
+		{
+			myEssentialNumbers.push_back(v[i]);
+		}
+	}
+	vector<string> myFinalEssentials;
+	for (int i = 0; i < myEssentialNumbers.size(); ++i)
+	{
+		for (int j = 0; j < prime_imps.size(); ++j)
+		{
+			if (prime_imps[j].checkForValue(myEssentialNumbers[i]))
+			{
+				myFinalEssentials.push_back(prime_imps[j].fromBol2Var());
+			}
+		}
+	}
+	cout << "these are the final essentials!\n";
+	for (int i = 0; i < myFinalEssentials.size(); ++i)
+		cout << myFinalEssentials[i] << endl;
 
-void calcEssentialImplicants(map <string, string> & primeImplicants, vector <string> &minTerms)
-{
-    vector <vector<int>> grid (primeImplicants.size(),
-                               std::vector<int>(minTerms.size()));
-    vector <string> mapKeys ;
-    map<string, string>::iterator itr;
-    for(itr = primeImplicants.begin(); itr != primeImplicants.end(); ++itr ) {
-        mapKeys.push_back( itr->first );
-    }
-    for (int i =0; i< mapKeys.size() ; i++){
-        istringstream iss(mapKeys[i]);
-        string s;
-        int n ;
-        while ( getline(iss,s,',')){
-            n = atoi(s.c_str());
-            vector<string>::iterator it = find(minTerms.begin(), minTerms.end(), s);
-            if (it == minTerms.end())
-            {
-                continue;
-            }
-            else{
-                int index = distance(minTerms.begin(), it);
-                grid[i][index] = 1;
-            }
-            
-        }
-    }
-    int count = 0;
-    int i, j, k;
-    vector <string> EPI;
-    vector <int> ks;
-    for (i=0; i<minTerms.size(); i++){
-        for (j=0; j<mapKeys.size(); j++){
-            count += grid[j][i];
-            if ((count == 1) && (grid[j][i]==1)) k=j;
-        }
-        if (count == 1){  // if the count still equals to 1 then the index in k is essential
-            if (find(EPI.begin(), EPI.end(), mapKeys[k]) == EPI.end())
-            EPI.push_back(mapKeys[k]);
-            ks.push_back(k);
-        }
-        count =0; // reset the count for the next loop
-    }
-    
-    for (int x = 0; x < ks.size(); x++){
-        for (int y=0; y<minTerms.size();y++){
-            if (grid[ks[x]][y]==1){
-                for(int z=0; z<mapKeys.size(); z++)
-                    grid[z][y]=0;
-                grid[ks[x]][y]=0;
-            }
-        }
-    }
+	/*for (int i = 0; i < v.size(); i++)
+	{
+		int count = 0;
+		bit ess_prime_imp;
+		for (int j = 0; j < prime_imps.size(); j++)
+		{
+			if (check_for_value(prime_imps[j],v[j]))
+			{
+				count++;
+				ess_prime_imp = prime_imps[j];
+			}
+		}
 
-    vector <string> binaryRepEPI, binaryRepPI;
-    
-//    cout << "The Prime Implicants are: ";
-    for(int i=0; i < mapKeys.size(); i++){
-        binaryRepPI.push_back(primeImplicants[mapKeys[i]]);
-//        cout << binaryRepPI[i] << ", ";
-    }
-//    cout << endl;
+		if (count == 1) {
+			// Essential Prime implicant
+			ess_prime_imp.print();
+		}
+	}*/
 
-//    cout << "The Essentials are: ";
-    for(int i=0; i < EPI.size(); i++){
-        binaryRepEPI.push_back(primeImplicants[EPI[i]]);
-        cout << binaryRepEPI[i] << ", ";
-    }
-//    cout << endl;
-    
-    //vector <string> varRepPI, varRepEPI;
-    char out[16]={'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'};
-    string outbar[16]={"A'","B'","C'","D'","E'","F'","G'","H'","I'","J'","K'","L'","M'","N'","O'","P'"};
-    string e = "";
-    cout << "The Prime Implicants are: ";
-    for (int i=0; i<binaryRepPI.size(); i++){
-        e = binaryRepPI[i];
-        for (int j=0; j<e.size(); j++){
-            if (e.at(j) == '0') cout << outbar[j];
-            else if (e.at(j) == '1') cout << out[j];
-            else continue;
-        }
-        if(i!= binaryRepPI.size()-1) cout << ", ";
-    }
-    cout << endl;
-    cout << "The Prime Essentials are: ";
-    e = "";
-    for (int i=0; i<binaryRepEPI.size(); i++){
-        e = binaryRepEPI[i];
-        for (int j=0; j<e.size(); j++){
-            if (e[j] == '0') cout << outbar[j];
-            else if (e[j] == '1') cout << out[j];
-            else continue;
-        }
-        if(i!= binaryRepEPI.size()-1) cout << ", ";
-    }
-    cout << endl;
+	/*for (int i = 0; i < col.size(); i++)
+		for (int j = 0; j < col[i].cols.size(); j++)
+			for (int k = 0; k < col[i].cols[j].terms.size(); k++)
+				if (!col[i].cols[j].terms[k].Checked()) {
+
+					b.push_back(col[i].cols[j].terms[k]);
+
+				}*/
+
+				//calcEssentialImplicants(myPIs,minterms);
+
+
+				/*vector <bit> essential;
+				if (essential.size() > 0)
+					for (int i = 0; i < essential.size(); i++) {
+						cout << essential[i].fromBol2Var() << " ";
+						essential[i].print();
+					}
+				else
+					cout << "zftttaa." << endl;*/
+
 }
 
 int main()
 {
-    clock_t start, end;
-    /* Recording the starting clock tick.*/
-    start = clock();
-        vector <int> input;
-        vector <string> minTerms;
-        vector <map<string, string>> col1;
-        map <string, string> minTerms_dontCares;
-        map <string, string> primeImplicants;
-        input = takeInput("test.txt");
-        fillMinTermsDontCaresDict (input ,minTerms_dontCares, minTerms );
-        calcFirstCol(minTerms_dontCares, col1);
-        calcRestOfCols(col1, primeImplicants);
-        calcEssentialImplicants(primeImplicants, minTerms);
-    
-    end = clock();
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-    cout << "Time taken by program is : " << fixed << time_taken << setprecision(5);
-    cout << " sec " << endl;
-        return 0;
+	clock_t start, end;
+
+	/* Recording the starting clock tick.*/
+	start = clock();
+
+	
+	
+
+
+	ifstream infile;
+	string file("test.txt");
+	infile.open(file);
+	string arr[3];
+	int j = 0;
+	string sLine;
+	while (!infile.eof())
+	{
+		infile >> sLine;
+		arr[j++] = sLine.data();
+	}
+	infile.close();
+	vector<int> v;
+	vector<Big> F;
+	vector<bit> b;
+	//cout<< getVarNo(arr[0]);
+
+	Run(getVarNo(arr[0]), fromStr2Vint(arr[1]), fromStr2Vint(arr[2]), F, b);
+
+	//v = fromStr2Vint(str);
+
+	// for (int i = 0; i < v.size(); i++)
+		//calcEssentialImplicants(b, v);
+	// cout << v[i] << endl;;
+
+	end = clock();
+	double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+	cout << "Time taken by program is : " << fixed
+		<< time_taken << setprecision(5);
+	cout << " sec " << endl;
+
+	return 0;
+
 }
+
+
