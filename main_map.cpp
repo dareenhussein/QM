@@ -114,11 +114,11 @@ void parseMinTerms(string line, vector<int> &input, int numberOfItems, int &coun
         
     }
     if (count == 0){
-        cout << "Your Function is always equal to 0" << endl;
+        cout << "Your Function is always equal to 0 \n" << endl;
         exit(1);
     }
     else if (count == pow(2, numberOfItems)){
-        cout << "Your Function is always equal to 1" << endl;
+        cout << "Your Function is always equal to 1 \n" << endl;
     }
 }
 
@@ -153,8 +153,7 @@ void parseDontCares(string line, vector<int> &input, int numberOfItems, int &cou
         }
         else
         {
-            cout << "There exists non-digits and make sure sum of dont cares and \
-            miterms within the range \n";
+            cout << "There exists non-digits and make sure sum of dont cares and miterms within the range \n";
             exit(1);
         }
     }
@@ -179,7 +178,7 @@ vector<int> takeInput (string path)
                 numberOfItems = pow(2,v);
                 if (v > 16 || v <1)
                 {
-                    cout << "Number is not within range (1-16)" ;
+                    cout << "Number is not within range (1-16) \n" ;
                     exit(1);
                 }
                 input.resize(numberOfItems, 0) ;
